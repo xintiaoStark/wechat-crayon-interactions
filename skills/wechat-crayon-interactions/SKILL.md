@@ -7,6 +7,8 @@ description: 把微信公众号文章中的揭晓、对照、展开、滚动、�
 
 从一个具体的读者动作开始。答案、资料和下一步都要有普通文字版本。保留作者给的原文、署名与视觉身份；新稿才补写教程内容。示例的梦飞AI署名不是其他作者的默认署名。
 
+将阅读层与插画层分开。正文、网页预览和静态稿共用 `scripts/typeplate.py` 的梦飞AI阅读规范：正文 16px / 28px、段后 24px，不堆空段；章节 20px 居中，小标题 18px 左齐，标题用品牌紫，正文用深灰，来源与图注用 13px 灰字。FH-014 的蜡笔色只承担封面与图形，不靠把正文染成各章墨色区分类别。
+
 1. 用 `python scripts/press.py --list` 查看 60 个编号及机制。在 [机制与边界](references/mechanisms.md) 中区分 SVG、原生滚动和依赖网页手势的效果。不要把动作分镜称为原手势。
 2. 从 [单项改字示例](examples/reveal.json) 派生配置。只选文章需要的项；输入段落写在 `intro`、`guide`、`outro`，作者写在 `author`。保留正式结论于 `still`。改作品里的字先运行 `--vocab 01` 查可替换的原词，再把 `terms`、`cue`、`still` 一起改。不要传入可执行 HTML。输入字段见 [配置说明](references/config.md)。
 3. 在本技能目录运行 `python scripts/press.py --config examples/reveal.json --out my-issue`。不提供配置会生成完整样刊；自有封面可用 `--cover cover.jpg`。使用新输出目录，仅在明确要重建时加 `--force`。脚本只需 Python 3.10+ 标准库。

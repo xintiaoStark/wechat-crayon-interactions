@@ -125,9 +125,11 @@ def motion(p,n):
         return p.svg(b+caption("三张校样，每张停两秒"))
     if n==36:
         parts=[wax(50,37,340,86,"#e1eadf"),place(proof(PINE),60,22,1.2),t(218,89,"校样入册",29,RED,bold=True)]
-        return p.svg(''.join('<g opacity="0">'+anim("opacity",0,1,f"{i*.65:.2f}s",".45s")+s+'</g>' for i,s in enumerate(parts))+caption("底色、主图、签印依次入场"))
+        b=''.join('<g opacity="0">'+attrset("opacity",0,go)+anim("opacity",0,1,f"{i*.65:.2f}s;{go}+{i*.65:.2f}s",".45s")+s+'</g>' for i,s in enumerate(parts))
+        return p.svg(b+caption("底色、主图、签印依次入场","轻点重播")+p.tap("run"))
     if n==37:
-        return p.svg(''.join('<g visibility="hidden">'+attrset("visibility","visible",f"{i*.18+.15:.2f}s")+t(34+i*31,98,char,28,INK,bold=True)+'</g>' for i,char in enumerate("把提示词写给一个具体的人。"))+caption("文字预先写好，逐字显现"))
+        b=''.join('<g visibility="hidden">'+attrset("visibility","hidden",go)+attrset("visibility","visible",f"{i*.18+.15:.2f}s;{go}+{i*.18+.15:.2f}s")+t(34+i*31,98,char,28,INK,bold=True)+'</g>' for i,char in enumerate("把提示词写给一个具体的人。"))
+        return p.svg(b+caption("文字预先写好，逐字显现","轻点重播")+p.tap("run"))
     if n==38:
         lines=[("给封面留一块白。",RED,75,7),("把动词写具体。",PINE,130,9)]
         return p.svg(''.join('<g>'+transform("translate","490 0;-290 0","0s",f"{sec}s",'repeatCount="indefinite"')+t(0,y,s,26,c)+'</g>' for s,c,y,sec in lines)+caption("校对眉批 · 两条跑道"))

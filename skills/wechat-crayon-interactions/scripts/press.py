@@ -7,13 +7,13 @@ import json
 from pathlib import Path
 import re
 from urllib.parse import urlsplit
-from xml.etree import ElementTree as ET
 
 from catalog import EFFECTS, GROUPS, GESTURES, SCROLL, group, kind
 from ink import Plate, WORDS, VOCAB, AUTHOR, artframe, book, PINE, BLUE, RED
 from effects import first, scrolling, motion
 from choices import decisions
 from gestures import gesture
+from typeplate import BRAND, MUTED, COMMON, OUTER, CHAPTER, SUBHEAD, CAPTION, SOURCE, CODE, CODEBOX, SIGN, SIGNBOX, reader_rules
 
 ROOT=Path(__file__).resolve().parents[1]
 ASSETS=ROOT/"assets"
@@ -29,14 +29,14 @@ DEFAULT={
     "outro":["挑一张适合当前段落的，再决定要不要用下一张。若读者没点开，也应当读得到要紧的结论。"],
     "repo_url":REPO,"gallery_url":GALLERY,
 }
-COMMON="margin:0 0 24px;padding:0;font-size:16px;line-height:1.75em;color:#2b332e;text-align:left;"
-OUTER="box-sizing:border-box;width:100%;margin:0;padding:0;color:#29312c;background:#fff;font-family:'PingFang SC','Microsoft YaHei',sans-serif;letter-spacing:0;"
 def para(value,style=COMMON):
     return '<p style="'+style+'"><span leaf="">'+ES(value)+'</span></p>'
 def link(label,url):
-    return '<p style="'+COMMON+'"><a href="'+ES(url)+'" style="color:#195f47;text-decoration:underline;"><span leaf="">'+ES(label)+'</span></a></p>'
-def h(value,large=False,color=PINE):
-    return para(value,f"margin:{30 if large else 22}px 0 8px;padding:0;color:{color};font-size:{23 if large else 19}px;font-weight:bold;line-height:1.5;font-family:Georgia,SimSun,serif;")
+    return '<p style="'+SOURCE+'"><a href="'+ES(url)+'" style="color:'+MUTED+';text-decoration:underline;"><span leaf="">'+ES(label)+'</span></a></p>'
+def h(value,large=False):
+    return para(value,CHAPTER if large else SUBHEAD)
+def codeblock(value):
+    return '<section style="'+CODEBOX+'">'+para(value,CODE)+'</section>'
 def url(value):
     parts=urlsplit(value)
     if parts.scheme!='https' or not parts.netloc or parts.username or parts.password:
@@ -90,7 +90,7 @@ LESSON=[
 def lesson_web():
     return '<aside class="print-example"><h4>这层墨是怎么揭开的？</h4><p>'+ES(LESSON[0])+'</p><pre class="sample-code">'+ES(TIP)+'</pre><p>'+ES(LESSON[1])+'</p><p>'+ES(LESSON[2])+'</p></aside>'
 def lesson_print():
-    return h("这层墨是怎么揭开的？")+para(LESSON[0])+para(TIP,COMMON+"font-family:monospace;overflow-wrap:anywhere;color:#195f47;")+para(LESSON[1])+para(LESSON[2])
+    return h("这层墨是怎么揭开的？")+para(LESSON[0])+codeblock(TIP)+para(LESSON[1])+para(LESSON[2])
 def merge_config(raw,ids):
     if not isinstance(raw,dict):raise ValueError("Config must be an object.")
     allowed=set(DEFAULT)|{"effects","sources","lesson","guide","install","opening_note"}
@@ -133,26 +133,27 @@ def assemble(conf,entries,art,poster=None):
     if 1 not in entries:intro+=marginal;md.extend([note,""])
     # A real image remains in the printable edition; a rendered cover can carry type for the WeChat body.
     pic=poster or art;image='<img alt="'+ES(conf['cover_alt'])+'" src="'+pic+'" style="display:block;width:100%;max-width:100%;height:auto;margin:0 auto 24px;">'
-    opening=('<section style="'+OUTER+'">'+(image if poster else h(conf['title'],True)+image)+para(author+" · FH-014 蜡笔社论",COMMON+"color:#195f47;")+''.join(para(s) for s in first_read)+(para(note) if 1 not in entries else ""))
+    opening=('<section style="'+OUTER+'">'+image+para(author+" · FH-014 蜡笔社论",CAPTION)+''.join(para(s) for s in first_read)+(para(note) if 1 not in entries else ""))
     parts={};chapterparts={};web_only=sum(n in GESTURES for n in entries)
     for g in chapters:
         start,title,eng,desc,color=GROUPS[g];chapterid=f"ch{g+1}"
-        hh=f'<header class="chapter-head"><div class="eyeline"><span class="serial">{g+1:02}</span> / {eng}</div><h2>{ES(title)}</h2><p>{ES(desc)}</p></header>'
+        copy_button=f'<button type="button" class="mini chapter-copy" data-copy="part" data-part="{chapterid}" title="复制本章" aria-label="复制本章">{ICONS["Copy"]}</button>'
+        hh=f'<header class="chapter-head">{copy_button}<h2>{g+1:02}　{ES(title)}</h2><p>{ES(desc)}</p></header>'
         html.append('<section id="'+chapterid+'" class="chapter" style="--chapter:'+color+'">'+hh)
-        sub=h(f'{g+1:02}　{title}',True,color)+para(desc);wx.append(sub);still.append(sub);cp=[sub];md+=["## "+title,"",desc,""]
+        sub=h(f'{g+1:02}　{title}',True)+para(desc);wx.append(sub);still.append(sub);cp=[sub];md+=["## "+title,"",desc,""]
         for n,entry in entries.items():
             if group(n)!=g:continue
             i=f"{n:02}";name=entry["name"];cue=entry["cue"];summary=entry["still"]
             live,printed,_=core(n,ns,entry['terms'],author)
             kind_label=("网页手势 · 正文为分镜" if n in GESTURES else "正文试贴 · 滚动" if n in SCROLL else "正文试贴 · SVG")
             html.append(f'<section id="s{i}" data-n="{n}" data-kind="{kind(n)}" class="effect"><div class="effect-head"><span class="en">{i}</span><h3>{ES(name)}</h3></div><p class="cue">{ES(cue)}</p><div class="work">'+work(n,live,author)+'</div><div class="eff-foot"><span class="channel">'+kind_label+'</span>'+('<button class="mini" data-play title="暂停动画" aria-label="暂停或继续自动动画">'+ICONS["Pause"]+'</button>' if n in range(35,40) else '')+f'<button class="mini" data-copy="part" data-part="{i}" title="复制第 {i} 项正文片段" aria-label="复制第 {i} 项正文片段">{ICONS["Copy"]}</button><button class="mini" data-reset title="从头体验" aria-label="重置第 {i} 张">{ICONS["RotateCcw"]}</button></div></section>')
-            head=h(i+"　"+name,False,color)
+            head=h(i+"　"+name)
             head+=para(cue if n not in GESTURES else "这张在正文里点播动作分镜。到完整体验页可以亲手玩。"+cue)
-            content=head+'<section style="display:block;max-width:540px;margin:0 auto 8px;">'+printed+'</section>'
-            if n in (4,5,6):content+=para("交稿标记 · "+author,COMMON+"color:#ac442e;")
-            content+=para(summary,COMMON+"font-size:14px;color:#526058;")
+            content=head+'<section style="display:block;max-width:540px;margin:0 auto 24px;">'+printed+'</section>'
+            if n in (4,5,6):content+=para("交稿标记 · "+author,CAPTION)
+            content+=para(summary)
             if n in GESTURES:content+=link("到第 "+i+" 张操作原手势",gallery+"#s"+i)
-            fallback=h(i+"　"+name,False,color)+para(cue)+para(summary)
+            fallback=h(i+"　"+name)+para(cue)+para(summary)
             parts[i]='<section style="'+OUTER+'">'+content+'</section>';cp.append(content);wx.append(content);still.append(fallback)
             md+=["### "+i+" "+name,"",cue,"",summary,"",f"[体验这一张]({gallery}#s{i})",""]
             if n==1:
@@ -174,25 +175,21 @@ def assemble(conf,entries,art,poster=None):
     call='用 $wechat-crayon-interactions，把我的提示词对照做成第 01 张遮罩揭晓，给出能复制到公众号的版本和静态答案。'
     cmd="python scripts/press.py --config examples/reveal.json --out my-issue"
     close_head="把一张样纸带回自己的文章"
-    close=f'<section class="closing" id="open-source"><div class="eyeline">COLOPHON / OPEN SOURCE</div><h2>{close_head}</h2>'+''.join('<p class="prose">'+ES(s)+'</p>' for s in guide+ending)+f'<p><a class="github" href="{ES(repo)}">{ICONS["Github"]} GitHub · wechat-crayon-interactions {ICONS["ArrowUpRight"]}</a></p><p class="prose">{ES(install)}</p><p class="prose">{ES(call)}</p><p class="prose">在 Skill 文件夹内运行这条命令，会得到自己的第一张样刊。</p><pre class="sample-code">{cmd}</pre><p class="prose"><a href="{ES(gallery)}">60 项完整体验页</a></p>'+''.join(f'<p><a href="{ES(s["url"])}">{ES(s["label"])}</a></p>' for s in sources)+'<span class="end-mark">'+ES(author)+'</span><a class="backtop" href="#top">回到封面 ↑</a></section>'
-    tail=h(close_head,True)+''.join(para(s) for s in guide+ending)+link("开源 Skill",repo)+para(repo)+para(install)+para(call)+para("在 Skill 文件夹内运行")+para(cmd)+link("60 项完整体验页",gallery)+para(gallery)+''.join(link(s['label'],s['url']) for s in sources)+para(author)+ '</section>'
+    close=f'<section class="closing" id="open-source"><div class="eyeline">COLOPHON / OPEN SOURCE</div><h2>{close_head}</h2>'+''.join('<p class="prose">'+ES(s)+'</p>' for s in guide+ending)+f'<p class="source-note"><a class="github" href="{ES(repo)}">{ICONS["Github"]} GitHub · wechat-crayon-interactions {ICONS["ArrowUpRight"]}</a></p><p class="prose">{ES(install)}</p><p class="prose">{ES(call)}</p><p class="prose">在 Skill 文件夹内运行这条命令，会得到自己的第一张样刊。</p><pre class="sample-code">{cmd}</pre><p class="source-note"><a href="{ES(gallery)}">60 项完整体验页</a></p>'+''.join(f'<p class="source-note"><a href="{ES(s["url"])}">{ES(s["label"])}</a></p>' for s in sources)+'<span class="end-mark">'+ES(author)+'</span><a class="backtop" href="#top">回到封面 ↑</a></section>'
+    tail=h(close_head,True)+''.join(para(s) for s in guide+ending)+link("开源 Skill",repo)+para(repo,SOURCE)+para(install)+para(call)+para("在 Skill 文件夹内运行")+codeblock(cmd)+link("60 项完整体验页",gallery)+para(gallery,SOURCE)+''.join(link(s['label'],s['url']) for s in sources)+'<section style="'+SIGNBOX+'">'+para(author,SIGN)+'</section></section>'
     md+=["## "+close_head,"",*guide,*ending,"",f"[开源 Skill]({repo})","",install,"",call,"","\x60\x60\x60sh",cmd,"\x60\x60\x60","",f"[60 项完整体验页]({gallery})",""]+[f'[{s["label"]}]({s["url"]})' for s in sources]
     payload={'wx':opening+''.join(wx)+tail,'static':opening+''.join(still)+tail,'parts':parts}
     safe_json=lambda value:json.dumps(value,ensure_ascii=False,separators=(',',':')).replace('<','\\u003c').replace('>','\\u003e')
-    css=(ASSETS/"reader.css").read_text(encoding="utf-8");scripts=(ASSETS/"clipboard.js").read_text(encoding="utf-8")+'\n'+(ASSETS/"reader.js").read_text(encoding="utf-8")
+    css=(ASSETS/"reader.css").read_text(encoding="utf-8")+'\n'+reader_rules();scripts=(ASSETS/"clipboard.js").read_text(encoding="utf-8")+'\n'+(ASSETS/"reader.js").read_text(encoding="utf-8")
     cover='<header class="cover" style="--art:url('+art+');"><div class="cover-type"><div class="folio">'+ES(author)+' / 手作刊 01</div><h1>'+''.join('<span>'+ES(s)+'</span>' for s in conf['cover_lines'])+'</h1><i class="inkline"></i><p class="dek">'+ES(conf['subtitle'])+'</p><span class="tiny">CRAYON EDITORIAL · FH-014</span></div></header>'
     page='<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src \x27none\x27; img-src data:; style-src \x27unsafe-inline\x27; script-src \x27unsafe-inline\x27; base-uri \x27none\x27; form-action \x27none\x27"><title>'+ES(conf['title'])+'</title><link rel="icon" href="data:,"><style>'+css+'</style></head><body id="top">'
     page+='<header class="top"><div class="wrap bar"><a href="#top" class="imprint"><i class="swatch"></i><span>'+ES(author)+'</span><small>Crayon Editorial</small></a><div class="tools"><button class="mini" id="contents-toggle" aria-label="章节目录" aria-expanded="false" aria-controls="contents-pop" title="章节目录">'+ICONS['List']+'</button><button class="mini" data-copy="static" title="复制静态全文" aria-label="复制静态全文">'+ICONS['FileText']+'</button><button class="tool primary" data-copy="wx">'+ICONS['Copy']+'复制公众号稿</button></div></div><nav hidden class="toc-pop" id="contents-pop">'+nav+'</nav></header>'
     page+='<div class="wrap">'+cover+'<div class="issue-rule"><strong>'+ES(conf['issue'])+'</strong><span>'+str(len(entries))+' 枚样张 · 蜡笔社论</span></div><div class="layout"><aside class="rail"><h2>本期目录</h2>'+nav+'</aside><main class="story">'+intro+''.join(html)+close+'</main></div></div><div hidden id="notice" role="status" class="notice"></div>'
-    # Chapter copies are useful when a whole long draft is too big for the editor.
-    for g in chapters:
-        key=f'ch{g+1}';old='<header class="chapter-head"><div class="eyeline"><span class="serial">'+f"{g+1:02}"
-        new='<header class="chapter-head"><button class="mini chapter-copy" data-copy="part" data-part="'+key+'" title="复制本章" aria-label="复制本章">'+ICONS["Copy"]+'</button><div class="eyeline"><span class="serial">'+f"{g+1:02}"
-        page=page.replace(old,new)
     page+='<script type="application/json" id="print-data">'+safe_json(payload)+'</script><script type="application/json" id="ui-icons">'+safe_json({'play':ICONS['Play'],'pause':ICONS['Pause']})+'</script><script>'+scripts+'</script></body></html>'
     license_text=(ASSETS/'lucide-LICENSE.txt').read_text(encoding='utf-8').replace('--','- -')
     page=page.replace('</head>','<!-- Lucide icon license:\n'+license_text+'\n--></head>',1)
     checklist=f"""发布清单
+公众号标题栏：{conf['title']}
 本稿 {len(entries)} 项。正文原手势试贴 {len(entries)-web_only} 项；网页手势 {web_only} 项在正文改为可点播的动作分镜。
 未通过微信客户端验收。复制的是富文本，不能用无格式粘贴。若长稿保存失败，可逐章、逐项定位。
 保存草稿并重新打开，再分别在 iOS 和 Android 微信预览。检查图像接管、点击热区、折叠后正文位置与纵横滑动。

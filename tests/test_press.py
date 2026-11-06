@@ -59,6 +59,21 @@ class PressTest(unittest.TestCase):
         with self.assertRaises(ValueError):press.merge_config({'effects':[1,1]},[])
         with self.assertRaises(ValueError):press.merge_config({'effects':[{'id':1,'terms':active}]},[])
         with self.assertRaises(ValueError):press.merge_config({'gallery_url':'javascript:alert(1)'},[])
+
+    def test_reading_styles_reach_both_print_editions(self):
+        cfg,items=press.merge_config({'effects':[1]},[])
+        files=press.assemble(cfg,items,press.picture(SKILL/'assets'/'cover.jpg'))
+        for name in ('wechat.html','static.html'):
+            doc=Nodes(files[name])
+            styles=[attrs['style'] for tag,attrs in doc.nodes if tag=='p' and 'style' in attrs]
+            self.assertIn(press.COMMON,styles)
+            self.assertIn(press.CHAPTER,styles)
+            self.assertIn(press.SUBHEAD,styles)
+            self.assertIn(press.CAPTION,styles)
+            self.assertIn('font-size:16px;line-height:1.75em;',press.COMMON)
+            self.assertIn('margin:0 0 24px',press.COMMON)
+            self.assertIn('color:#6A5DF5',press.CHAPTER)
+            self.assertIn('color:#3E3E3E',press.COMMON)
     def test_cli_output_overwrite_and_portability(self):
         with TemporaryDirectory() as temp:
             cmd=[sys.executable,str(SKILL/'scripts'/'press.py'),'--config',str(SKILL/'examples'/'reveal.json'),'--out',str(Path(temp)/'issue')]
