@@ -27,7 +27,7 @@
 <set attributeName="visibility" to="hidden" begin="click" fill="freeze"/>
 ```
 
-把下面这一行放进遮罩的 g 组。begin 让它等点击，visibility 改这一组的可见性，freeze 让揭开后的状态留下。图不需要为这一步运行网页脚本。
+把这行代码放进遮罩的 g 组。begin 让它等点击，visibility 改这一组的可见性，freeze 让揭开后的状态留下。这一步不需要网页脚本。
 
 第 04 张换了一种做法，动的是画布高度。展开时请盯着交稿标记，跟着下移，就说明真的多出了一段版面。
 
