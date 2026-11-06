@@ -1,0 +1,4 @@
+interface:
+  display_name: "公众号互动样刊"
+  short_description: "把文章做成蜡笔社论风的可操作样刊、无脚本试贴稿与静态对照"
+  default_prompt: "用 $wechat-crayon-interactions 把这篇文章里适合互动的段落做成可体验、可试贴和可静态阅读的版本。"
